@@ -125,31 +125,36 @@
                     form.value.principal = null;
                 };
 
-                const calcInterest = (loan) => {
-                    if (loan.remaining <= 0) return "0.00";
-                    // 计算从 lastTick 到现在的天数
-                    const diffTime = Date.now() - loan.lastTick;
-                    const days = diffTime / (1000 * 60 * 60 * 24);
-                    // 1.5%月息换算成日息 (1.5% / 30天)
-                    const interest = loan.remaining * (0.015 / 30) * Math.max(days, 0);
-                    return interest.toFixed(2);
-                };
+               const repay = (cIdx, lIdx, type) => {
+    const amount = prompt(`请输入收到的金额:`);
+    if (amount === null || amount === "" || isNaN(amount)) return;
+    const val = parseFloat(amount);
+    const loan = clients.value[cIdx].loans[lIdx];
 
-                const repay = (cIdx, lIdx, type) => {
-                    const amount = prompt(`请输入收到的金额:`);
-                    if (amount === null || amount === "" || isNaN(amount)) return;
-                    const val = parseFloat(amount);
-                    const loan = clients.value[cIdx].loans[lIdx];
-
-                    if (type === 'I') {
-                        loan.paidI += val;
-                        // 收息后，将计息起点设为今天，表示之前的息已清
-                        loan.lastTick = Date.now(); 
-                    } else {
-                        loan.remaining -= val;
-                        loan.paidP += val;
-                    }
-                };
+    if (type === 'I') {
+        // 核心逻辑改进：
+        // 1. 获取当前系统算出的欠息
+        const currentPending = parseFloat(calcInterest(loan));
+        // 2. 将收到的钱存入已还记录
+        loan.paidI += val;
+        
+        // 3. 如果收的钱【少于】当前欠息，我们需要通过调整 lastTick 来“补偿”差额
+        // 公式：新的起算点 = 现在 - (剩余欠息产生的所需时间)
+        const remainingInterest = currentPending - val;
+        const dailyRate = (loan.remaining * (0.015 / 30));
+        
+        if (dailyRate > 0) {
+            const daysToOffset = remainingInterest / dailyRate;
+            loan.lastTick = Date.now() - (daysToOffset * 24 * 60 * 60 * 1000);
+        } else {
+            loan.lastTick = Date.now();
+        }
+    } else {
+        // 收本金逻辑不变
+        loan.remaining -= val;
+        loan.paidP += val;
+    }
+};
 
                 const totalPending = (client) => {
                     return client.loans.reduce((sum, l) => sum + l.remaining, 0).toFixed(2);
