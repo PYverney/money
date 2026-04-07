@@ -3,105 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>专业借贷管理系统-日期增强版</title>
+    <title>私贷账目管理系统</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
 </head>
-<body class="bg-gray-100 p-4">
-    <div id="app" class="max-w-md mx-auto pb-24">
-        <h1 class="text-2xl font-black text-center my-6 text-gray-800">客户借贷统计</h1>
-
-        <div class="bg-white p-5 rounded-2xl shadow-sm mb-6 border border-blue-100">
-            <h2 class="font-bold mb-4 text-gray-700 flex items-center">
-                <span class="bg-blue-500 w-1 h-4 mr-2 rounded"></span>新账目登记
-            </h2>
-            
-            <label class="block text-xs text-gray-400 mb-1 ml-1">客户姓名</label>
-            <input v-model="form.name" placeholder="请输入姓名" class="w-full mb-3 p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-blue-400">
-            
-            <label class="block text-xs text-gray-400 mb-1 ml-1">放款本金 (¥)</label>
-            <input v-model.number="form.principal" type="number" placeholder="请输入金额" class="w-full mb-3 p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-blue-400">
-            
-            <label class="block text-xs text-gray-400 mb-1 ml-1">放款时间 (利息从此日开始计算)</label>
-            <input v-model="form.date" type="date" class="w-full mb-4 p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-gray-600">
-            
-            <div class="bg-blue-50 p-3 rounded-xl mb-4 text-xs text-blue-600 font-medium">
-                默认月息：1.5% (按实际天数折算计息)
+<body class="bg-slate-50 p-4 text-slate-900 font-sans">
+    <div id="app" class="max-w-md mx-auto pb-28">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-black tracking-tight text-slate-800 italic">CREDIT<span class="text-blue-600">PRO</span></h1>
+            <div class="text-right">
+                <p class="text-[10px] text-slate-400 font-bold uppercase">当前总余额</p>
+                <p class="text-lg font-black text-blue-600">¥ {{ allClientsTotalPrincipal }}</p>
             </div>
+        </header>
 
-            <button @click="addRecord" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition-transform">录入借款</button>
-        </div>
-
-        <div v-for="(client, cIdx) in clients" :key="cIdx" class="bg-white rounded-2xl shadow-sm mb-4 overflow-hidden border border-gray-100">
-            <div @click="client.expand = !client.expand" class="p-4 flex justify-between items-center bg-white active:bg-gray-50">
+        <section class="bg-white p-5 rounded-3xl shadow-xl shadow-slate-200/50 mb-8 border border-white">
+            <h2 class="text-sm font-bold mb-4 flex items-center text-slate-700">
+                <span class="w-1.5 h-4 bg-blue-600 rounded-full mr-2"></span>新增借款登记
+            </h2>
+            <div class="space-y-4">
                 <div>
-                    <div class="font-black text-lg text-gray-800">{{ client.name }}</div>
-                    <div class="text-xs text-gray-400">进行中: {{ activeLoanCount(client) }} 笔 / 总: {{ client.loans.length }} 笔</div>
+                    <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">客户姓名</label>
+                    <input v-model="form.name" placeholder="输入或选择姓名" class="w-full p-3.5 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all border border-slate-100">
+                </div>
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">借款本金 (¥)</label>
+                        <input v-model.number="form.principal" type="number" placeholder="0.00" class="w-full p-3.5 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all border border-slate-100">
+                    </div>
+                    <div class="w-32">
+                        <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">月利率</label>
+                        <div class="p-3.5 bg-slate-100 text-slate-500 rounded-2xl text-center font-bold border border-slate-100">1.5%</div>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">放款开始日期</label>
+                    <input v-model="form.date" type="date" class="w-full p-3.5 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all border border-slate-100 text-slate-600">
+                </div>
+                <button @click="addRecord" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm shadow-lg shadow-slate-300 active:scale-95 transition-all">录入账目</button>
+            </div>
+        </section>
+
+        <div v-for="(client, cIdx) in clients" :key="cIdx" class="mb-4">
+            <div @click="client.expand = !client.expand" :class="client.expand ? 'rounded-t-3xl bg-white border-b-0' : 'rounded-3xl bg-white'" class="p-5 flex justify-between items-center shadow-sm border border-slate-100 transition-all active:bg-slate-50">
+                <div>
+                    <h3 class="font-black text-slate-800 text-lg">{{ client.name }}</h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                        在贷: {{ activeCount(client) }} 笔 / 已清: {{ client.loans.length - activeCount(client) }} 笔
+                    </p>
                 </div>
                 <div class="text-right">
-                    <div class="text-xs text-gray-400">剩余总本金</div>
-                    <div class="font-bold text-red-500 text-lg">¥ {{ totalPending(client) }}</div>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">本金欠款</p>
+                    <p class="text-lg font-black text-red-500">¥ {{ clientTotal(client) }}</p>
                 </div>
             </div>
 
-            <div v-show="client.expand" class="bg-gray-50 p-3 space-y-3 border-t border-gray-100">
-                <div v-for="(loan, lIdx) in client.loans" :key="lIdx" class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm relative">
-                    <div class="flex justify-between items-start mb-2">
-                        <span :class="loan.remaining <= 0 ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'" class="px-2 py-0.5 rounded text-[10px] font-bold">
-                            {{ loan.remaining <= 0 ? '已结清' : '利息计算中' }}
+            <div v-show="client.expand" class="bg-slate-50/50 rounded-b-3xl border border-t-0 border-slate-100 p-3 pt-0 space-y-3 shadow-inner">
+                <div v-for="(loan, lIdx) in client.loans" :key="lIdx" class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <span :class="loan.remaining <= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'" class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                            {{ loan.remaining <= 0 ? '已结清' : '计息中' }}
                         </span>
-                        <span class="text-[10px] text-gray-400 font-medium tracking-tighter">{{ loan.date }} 放款</span>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-y-2 text-xs mb-3">
-                        <div class="text-gray-500 text-nowrap">初始本金: <span class="text-gray-800 font-medium">{{ loan.principal }}</span></div>
-                        <div class="text-gray-500 text-nowrap text-right">剩余本金: <span class="text-red-500 font-bold text-sm">{{ loan.remaining }}</span></div>
-                        <div class="text-gray-500 text-nowrap">累计已还利息: <span class="text-emerald-600 font-medium">{{ (loan.paidI).toFixed(2) }}</span></div>
-                        <div class="text-gray-500 text-nowrap text-right">当前欠息: <span class="text-orange-500 font-bold text-sm">{{ calcInterest(loan) }}</span></div>
+                        <span class="text-[10px] font-bold text-slate-300">{{ loan.date }} 借入</span>
                     </div>
 
-                    <div class="flex gap-2 border-t pt-3" v-if="loan.remaining > 0">
-                        <button @click="repay(cIdx, lIdx, 'I')" class="flex-1 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold">收利息</button>
-                        <button @click="repay(cIdx, lIdx, 'P')" class="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold">收本金</button>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">当前剩余本金</p>
+                            <p class="text-sm font-black text-slate-800">¥ {{ loan.remaining.toFixed(2) }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">当前滚存利息</p>
+                            <p class="text-sm font-black text-orange-500">¥ {{ calcInterest(loan) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">累计已收利息</p>
+                            <p class="text-xs font-bold text-emerald-600">¥ {{ loan.paidI.toFixed(2) }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">初始借出本金</p>
+                            <p class="text-xs font-bold text-slate-500">¥ {{ loan.principal.toFixed(2) }}</p>
+                        </div>
                     </div>
-                    
-                    <div class="text-right mt-2" v-else>
-                        <button @click="deleteSingleLoan(cIdx, lIdx)" class="text-[10px] text-gray-300">删除此笔结清记录</button>
+
+                    <div class="flex gap-2" v-if="loan.remaining > 0">
+                        <button @click="repay(cIdx, lIdx, 'I')" class="flex-1 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-100 active:scale-95">收利息</button>
+                        <button @click="repay(cIdx, lIdx, 'P')" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-md shadow-blue-100 active:scale-95">收本金</button>
+                    </div>
+                    <div v-else class="flex justify-center border-t border-slate-50 pt-3 mt-1">
+                        <button @click="deleteLoan(cIdx, lIdx)" class="text-[10px] font-bold text-slate-300 hover:text-red-400 transition-colors uppercase tracking-widest">删除此笔结清记录</button>
                     </div>
                 </div>
-                <button @click="deleteClient(cIdx)" class="w-full py-2 text-xs text-gray-300 font-medium">永久删除客户: {{client.name}}</button>
+                <div class="py-2 flex justify-center">
+                    <button @click="deleteClient(cIdx)" class="text-[10px] font-bold text-slate-300 hover:text-red-400 transition-colors uppercase tracking-widest">永久抹除客户资料</button>
+                </div>
             </div>
         </div>
 
         <div class="fixed bottom-6 left-4 right-4 flex gap-3">
-            <button @click="exportData" class="flex-1 bg-gray-800 text-white py-4 rounded-2xl shadow-xl text-sm font-bold opacity-90 active:scale-95 transition-transform flex items-center justify-center">
-                导出数据备份 (JSON)
+            <button @click="exportData" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl shadow-2xl text-xs font-black flex items-center justify-center gap-2 active:scale-95 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                导出账本备份 (JSON)
             </button>
         </div>
     </div>
 
     <script>
-        const { createApp, ref, onMounted, watch } = Vue;
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
         createApp({
             setup() {
-                // 初始化表单，默认日期为今天
                 const getToday = () => new Date().toISOString().split('T')[0];
-                
                 const clients = ref([]);
                 const form = ref({ name: '', principal: null, date: getToday() });
 
+                // 数据持久化存储
                 onMounted(() => {
-                    const saved = localStorage.getItem('loan_v3_data');
+                    const saved = localStorage.getItem('PRO_LOAN_DATA_STORAGE');
                     if (saved) clients.value = JSON.parse(saved);
                 });
 
-                watch(clients, (v) => localStorage.setItem('loan_v3_data', JSON.stringify(v)), { deep: true });
+                watch(clients, (v) => {
+                    localStorage.setItem('PRO_LOAN_DATA_STORAGE', JSON.stringify(v));
+                }, { deep: true });
+
+                // 计算总览
+                const allClientsTotalPrincipal = computed(() => {
+                    return clients.value.reduce((sum, c) => {
+                        return sum + c.loans.reduce((lSum, l) => lSum + l.remaining, 0);
+                    }, 0).toFixed(2);
+                });
 
                 const addRecord = () => {
-                    if (!form.value.name || !form.value.principal || !form.value.date) {
-                        alert("请填写完整信息");
-                        return;
-                    }
+                    if (!form.value.name || !form.value.principal) return alert("请完整填写姓名和金额");
                     
                     let client = clients.value.find(c => c.name === form.value.name);
                     if (!client) {
@@ -109,80 +147,79 @@
                         clients.value.unshift(client);
                     }
 
-                    // 转换选择的日期为毫秒数
-                    const selectedDate = new Date(form.value.date).getTime();
-
                     client.loans.unshift({
-                        principal: form.value.principal,
-                        remaining: form.value.principal,
-                        paidP: 0,
+                        principal: parseFloat(form.value.principal),
+                        remaining: parseFloat(form.value.principal),
                         paidI: 0,
                         date: form.value.date,
-                        lastTick: selectedDate // 利息从此日期开始计算
+                        lastTick: new Date(form.value.date).getTime()
                     });
                     
-                    // 重置部分表单
                     form.value.principal = null;
                 };
 
-               const repay = (cIdx, lIdx, type) => {
-    const amount = prompt(`请输入收到的金额:`);
-    if (amount === null || amount === "" || isNaN(amount)) return;
-    const val = parseFloat(amount);
-    const loan = clients.value[cIdx].loans[lIdx];
-
-    if (type === 'I') {
-        // 核心逻辑改进：
-        // 1. 获取当前系统算出的欠息
-        const currentPending = parseFloat(calcInterest(loan));
-        // 2. 将收到的钱存入已还记录
-        loan.paidI += val;
-        
-        // 3. 如果收的钱【少于】当前欠息，我们需要通过调整 lastTick 来“补偿”差额
-        // 公式：新的起算点 = 现在 - (剩余欠息产生的所需时间)
-        const remainingInterest = currentPending - val;
-        const dailyRate = (loan.remaining * (0.015 / 30));
-        
-        if (dailyRate > 0) {
-            const daysToOffset = remainingInterest / dailyRate;
-            loan.lastTick = Date.now() - (daysToOffset * 24 * 60 * 60 * 1000);
-        } else {
-            loan.lastTick = Date.now();
-        }
-    } else {
-        // 收本金逻辑不变
-        loan.remaining -= val;
-        loan.paidP += val;
-    }
-};
-
-                const totalPending = (client) => {
-                    return client.loans.reduce((sum, l) => sum + l.remaining, 0).toFixed(2);
+                const calcInterest = (loan) => {
+                    if (loan.remaining <= 0) return "0.00";
+                    const diffMs = Date.now() - loan.lastTick;
+                    const days = diffMs / (1000 * 24 * 3600);
+                    // 月息1.5%，折算日息：1.5 / 100 / 30
+                    const interest = loan.remaining * (0.015 / 30) * Math.max(days, 0);
+                    return interest.toFixed(2);
                 };
 
-                const activeLoanCount = (client) => {
-                    return client.loans.filter(l => l.remaining > 0).length;
+                const repay = (cIdx, lIdx, type) => {
+                    const amount = prompt(`请输入收到的金额 (¥):`);
+                    if (amount === null || amount === "" || isNaN(amount)) return;
+                    const val = parseFloat(amount);
+                    const loan = clients.value[cIdx].loans[lIdx];
+
+                    // 在变更任何数据前，先算出此时此刻产生的利息
+                    const currentInterest = parseFloat(calcInterest(loan));
+                    const dailyRate = loan.remaining * (0.015 / 30);
+
+                    if (type === 'I') {
+                        loan.paidI += val;
+                        // 部分还息逻辑：如果不满全额，计算剩余利息对应的“回溯时间点”
+                        if (dailyRate > 0) {
+                            const leftInterest = currentInterest - val;
+                            const offsetMs = (leftInterest / dailyRate) * 24 * 3600 * 1000;
+                            loan.lastTick = Date.now() - offsetMs;
+                        } else {
+                            loan.lastTick = Date.now();
+                        }
+                    } else {
+                        // 收本金逻辑：为了保证“收本前”产生的利息数额不变，调整时间起点
+                        loan.remaining -= val;
+                        const newDailyRate = loan.remaining * (0.015 / 30);
+                        if (newDailyRate > 0) {
+                            const offsetMs = (currentInterest / newDailyRate) * 24 * 3600 * 1000;
+                            loan.lastTick = Date.now() - offsetMs;
+                        } else {
+                            loan.lastTick = Date.now();
+                        }
+                    }
                 };
 
-                const deleteSingleLoan = (cIdx, lIdx) => {
-                    if(confirm('确认删除这笔借款记录吗？')) clients.value[cIdx].loans.splice(lIdx, 1);
-                };
-
-                const deleteClient = (idx) => {
-                    if(confirm('确认永久删除该客户及其所有历史记录吗？')) clients.value.splice(idx, 1);
-                };
+                const clientTotal = (c) => c.loans.reduce((s, l) => s + l.remaining, 0).toFixed(2);
+                const activeCount = (c) => c.loans.filter(l => l.remaining > 0).length;
+                const deleteLoan = (cIdx, lIdx) => confirm('确认删除这笔历史记录吗？') && clients.value[cIdx].loans.splice(lIdx, 1);
+                const deleteClient = (idx) => confirm('将永久删除该客户及其所有账目，确定吗？') && clients.value.splice(idx, 1);
 
                 const exportData = () => {
-                    const data = JSON.stringify(clients.value, null, 2);
-                    const blob = new Blob([data], {type: 'application/json'});
+                    const dataStr = JSON.stringify(clients.value, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `账本备份_${new Date().toLocaleDateString()}.json`;
-                    a.click();
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `账本备份_${new Date().toLocaleDateString()}.json`;
+                    link.click();
                 };
 
-                return { clients, form, addRecord, calcInterest, repay, totalPending, activeLoanCount, deleteSingleLoan, deleteClient, exportData };
+                return { 
+                    clients, form, allClientsTotalPrincipal, 
+                    addRecord, calcInterest, repay, 
+                    clientTotal, activeCount, deleteLoan, deleteClient, exportData 
+                };
             }
         }).mount('#app');
     </script>
